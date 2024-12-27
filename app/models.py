@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 
 
 #Área do admin
+#obs: adcionar os tamanhos para as bebidas, como 1l , 600ml, etc.
+
 class Categoria(models.Model):
     nome = models.CharField(max_length=100)
 
@@ -24,16 +26,21 @@ class Produto(models.Model):
 class Complemento(models.Model):
     nome = models.CharField(max_length=100)
     preco = models.DecimalField(max_digits=5, decimal_places=2)
-    produto = models.ForeignKey(Produto, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.nome
 
+class ItemCarrinho(models.Model):
+    produto = models.ForeignKey(Produto, on_delete=models.CASCADE)
+    complemento = models.ForeignKey(Complemento, on_delete=models.CASCADE, blank=True, null=True)
+
+    def __str__(self):
+        return f'Item - {self.produto.nome}'
+
 
 #Área do cliente
 class Carrinho(models.Model):
-    produtos = models.ManyToManyField(Produto)
-    complementos = models.ManyToManyField(Complemento)
+    itens = models.ManyToManyField(ItemCarrinho)
 
     def __str__(self):
         return 'Carrinho'
