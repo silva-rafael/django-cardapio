@@ -1,0 +1,169 @@
+{% extends 'app/base.html' %}
+
+{% block title %}Cardápio - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="bg-white">
+    <div class="max-w-2xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:max-w-7xl lg:px-8">
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-extrabold tracking-tight text-gray-900">Cardápio</h2>
+                <div class="flex space-x-4">
+                    {% for categoria in categorias %}
+                        <button class="categoria-btn px-4 py-2 rounded-md {% if forloop.first %}bg-indigo-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}"
+                                data-categoria="{{ categoria.id }}">
+                            {{ categoria.nome }}
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-y-10 sm:grid-cols-2 gap-x-6 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
+            {% for produto in produtos %}
+                <div class="group produto-card" data-categoria="{{ produto.categoria.id }}">
+                    <div class="w-full aspect-w-1 aspect-h-1 bg-gray-200 rounded-lg overflow-hidden xl:aspect-w-7 xl:aspect-h-8">
+                        {% if produto.imagem %}
+                            <img src="{{ produto.imagem.url }}" alt="{{ produto.nome }}" class="w-full h-full object-center object-cover">
+                        {% else %}
+                            <div class="w-full h-full bg-gray-300 flex items-center justify-center">
+                                <span class="text-gray-500">Sem imagem</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <h3 class="mt-4 text-sm text-gray-700">{{ produto.nome }}</h3>
+                    <p class="mt-1 text-lg font-medium text-gray-900">R$ {{ produto.preco }}</p>
+                    <button onclick="abrirModalProduto({{ produto.id }})" 
+                            class="mt-2 w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                        Adicionar ao Carrinho
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal do Produto -->
+<div id="modal-produto" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg max-w-md w-full">
+        <h3 id="modal-titulo" class="text-lg font-bold mb-4"></h3>
+        <p id="modal-descricao" class="text-gray-600 mb-4"></p>
+        <form id="form-adicionar" method="POST" action="">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="quantidade">
+                    Quantidade
+                </label>
+                <input type="number" name="quantidade" value="1" min="1" 
+                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div id="complementos-container" class="mb-4">
+                <!-- Complementos serão inseridos aqui via JavaScript -->
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="observacao">
+                    Observações
+                </label>
+                <textarea name="observacao" 
+                          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                          rows="3"></textarea>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" onclick="fecharModalProduto()" 
+                        class="mr-2 px-4 py-2 text-gray-600 hover:text-gray-800">
+                    Cancelar
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                    Adicionar ao Carrinho
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtro de categorias
+    const categoriaBtns = document.querySelectorAll('.categoria-btn');
+    const produtoCards = document.querySelectorAll('.produto-card');
+
+    categoriaBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const categoriaId = btn.dataset.categoria;
+            
+            // Atualizar botões
+            categoriaBtns.forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
+            categoriaBtns.forEach(b => b.classList.add('bg-gray-200', 'text-gray-700'));
+            btn.classList.remove('bg-gray-200', 'text-gray-700');
+            btn.classList.add('bg-indigo-600', 'text-white');
+            
+            // Filtrar produtos
+            produtoCards.forEach(card => {
+                if (card.dataset.categoria === categoriaId) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+
+async function abrirModalProduto(produtoId) {
+    const modal = document.getElementById('modal-produto');
+    const form = document.getElementById('form-adicionar');
+    const complementosContainer = document.getElementById('complementos-container');
+    
+    // Buscar dados do produto
+    try {
+    const response = await fetch(`/api/produtos/${produtoId}/`);
+    if (!response.ok) {
+        throw new Error(`Erro ao buscar produto: ${response.status}`);
+    }
+    const produto = await response.json();
+
+    if (!produto.complementos_disponiveis) {
+        console.warn("O produto não possui complementos disponíveis.");
+    }
+    
+    // Código existente...
+    } catch (error) {
+        console.error("Erro ao buscar os dados do produto:", error);
+        alert("Não foi possível carregar as informações do produto. Tente novamente mais tarde.");
+    }
+
+    
+    document.getElementById('modal-titulo').textContent = produto.nome;
+    document.getElementById('modal-descricao').textContent = produto.descricao;
+    form.action = `/carrinho/adicionar/${produtoId}/`;
+    
+    // Limpar e preencher complementos
+    complementosContainer.innerHTML = '';
+    if (produto.complementos_disponiveis.length > 0) {
+        const complementosHtml = produto.complementos_disponiveis.map(complemento => `
+            <div class="flex items-center mb-2">
+                <input type="checkbox" name="complementos" value="${complemento.id}" 
+                       class="mr-2" id="comp-${complemento.id}">
+                <label for="comp-${complemento.id}">
+                    ${complemento.nome} (+R$ ${complemento.preco_adicional})
+                </label>
+            </div>
+        `).join('');
+        complementosContainer.innerHTML = `
+            <label class="block text-gray-700 text-sm font-bold mb-2">
+                Complementos
+            </label>
+            ${complementosHtml}
+        `;
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function fecharModalProduto() {
+    const modal = document.getElementById('modal-produto');
+    modal.classList.add('hidden');
+}
+</script>
+{% endblock %}

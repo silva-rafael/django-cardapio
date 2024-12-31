@@ -3,10 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cardápio Online</title>
+    <title>{% block title %}Lanchonete{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs" defer></script>
 </head>
-<body>
-    {% block content %}
-    {% endblock content %}
+<body class="bg-gray-100">
+    <nav class="bg-indigo-600">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="{% url 'cardapio' %}" class="text-white font-bold">Lanchonete</a>
+                </div>
+                <div class="flex items-center">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'ver_carrinho' %}" class="text-white px-3 py-2 rounded-md text-sm font-medium">
+                            Carrinho
+                            <span id="carrinho-qtd" class="bg-red-500 text-white rounded-full px-2 py-1 text-xs">
+                                {{ request.user.carrinhocompra.itens.count }}
+                            </span>
+                        </a>
+                        <div class="ml-4 relative" x-data="{ open: false }">
+                            <button @click="open = !open" class="text-white">
+                                {{ user.username }}
+                            </button>
+                            <div x-show="open" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg">
+                                <a href="" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    Meus Pedidos
+                                </a>
+                                {% if user.is_staff %}
+                                    <a href="{% url 'painel_admin' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Painel Admin
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    Sair
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="text-white px-3 py-2 rounded-md text-sm font-medium">Login</a>
+                        <a href="{% url 'register' %}" class="text-white px-3 py-2 rounded-md text-sm font-medium">Cadastro</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>
